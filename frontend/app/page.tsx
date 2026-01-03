@@ -14,7 +14,7 @@ import {
   Coins
 } from 'lucide-react';
 import { getPortfolioOverview } from '@/lib/api';
-import { PortfolioOverview, ASSET_COLORS, Holding } from '@/lib/types';
+import { PortfolioOverview, ASSET_COLORS, HoldingDetail } from '@/lib/types';
 import { formatCurrency, formatPercent, isPositive, classNames } from '@/lib/utils';
 import StatCard from '@/components/StatCard';
 import HoldingCard from '@/components/HoldingCard';
@@ -35,7 +35,7 @@ function PortfolioAllocation({
 }: { 
   pieData: { asset: string; value: number; color: string; percent: number }[]; 
   totalValue: number;
-  holdings: Holding[];
+  holdings: HoldingDetail[];
 }) {
   const [hoveredAsset, setHoveredAsset] = useState<string | null>(null);
   

@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { getPrice } from '@/lib/api';
-import { PriceData, Holding, ASSET_COLORS } from '@/lib/types';
+import { PriceData, HoldingDetail, ASSET_COLORS } from '@/lib/types';
 import { formatCurrency, formatPercent, isPositive, classNames } from '@/lib/utils';
 import { TrendingUp, TrendingDown, RefreshCw, ChevronDown, ChevronUp, BarChart2 } from 'lucide-react';
 
 interface PricesTickerProps {
-  holdings: Holding[];
+  holdings: HoldingDetail[];
 }
 
 export default function PricesTicker({ holdings }: PricesTickerProps) {

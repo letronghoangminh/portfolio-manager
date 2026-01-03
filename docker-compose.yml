@@ -1,9 +1,9 @@
-version: '3.8'
+name: portfolio-manager
 
 services:
   postgres:
     image: postgres:15-alpine
-    container_name: portfolio_postgres
+    container_name: portfolio-manager-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -17,7 +17,63 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - portfolio-network
+
+  migrate:
+    image: migrate/migrate:latest
+    container_name: portfolio-manager-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./migrations:/migrations
+    command: [
+      "-path", "/migrations",
+      "-database", "postgres://postgres:postgres@postgres:5432/portfolio_manager?sslmode=disable",
+      "up"
+    ]
+    networks:
+      - portfolio-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portfolio-manager-backend
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    env_file:
+      - ./backend/.env
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/portfolio_manager?sslmode=disable
+      PORT: "8080"
+      GIN_MODE: release
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    networks:
+      - portfolio-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: portfolio-manager-frontend
+    depends_on:
+      - backend
+    environment:
+      API_URL: http://backend:8080
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      - portfolio-network
 
 volumes:
   postgres_data:
 
+networks:
+  portfolio-network:
+    driver: bridge
