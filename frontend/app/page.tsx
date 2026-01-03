@@ -45,13 +45,17 @@ function PortfolioAllocation({
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   
+  // Calculate total percent for normalization (should be ~100 but might vary)
+  const totalPercent = pieData.reduce((sum, d) => sum + d.percent, 0);
+  
   let cumulativePercent = 0;
   const segments = pieData.map((d) => {
-    const percent = (d.value / totalValue) * 100;
-    const strokeDasharray = `${(percent / 100) * circumference} ${circumference}`;
+    // Use the stored percent value for consistency with Holdings
+    const normalizedPercent = totalPercent > 0 ? (d.percent / totalPercent) * 100 : 0;
+    const strokeDasharray = `${(normalizedPercent / 100) * circumference} ${circumference}`;
     const strokeDashoffset = -((cumulativePercent / 100) * circumference);
-    cumulativePercent += percent;
-    return { ...d, percent, strokeDasharray, strokeDashoffset };
+    cumulativePercent += normalizedPercent;
+    return { ...d, strokeDasharray, strokeDashoffset };
   });
 
   const hoveredData = hoveredAsset ? pieData.find(d => d.asset === hoveredAsset) : null;
@@ -98,7 +102,7 @@ function PortfolioAllocation({
                   </p>
                   <p className="text-sm font-mono">{formatCurrency(hoveredData.value)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {(hoveredData.value / totalValue * 100).toFixed(1)}%
+                    {hoveredData.percent.toFixed(1)}%
                   </p>
                   {hoveredHolding && (
                     <p className="text-xs text-muted-foreground mt-1">
@@ -138,7 +142,7 @@ function PortfolioAllocation({
               <div className="text-right">
                 <span className="font-mono text-sm">{formatCurrency(d.value)}</span>
                 <span className="text-muted-foreground text-xs ml-2">
-                  ({(d.value / totalValue * 100).toFixed(1)}%)
+                  ({d.percent.toFixed(1)}%)
                 </span>
               </div>
             </div>
@@ -205,7 +209,7 @@ export default function Dashboard() {
   const positive = isPositive(totalPnL);
 
   // Calculate pie chart data
-  const pieData = portfolio?.holdings.map(h => ({
+  const pieDataUnsorted = portfolio?.holdings.map(h => ({
     asset: h.asset,
     value: parseFloat(h.current_value),
     color: ASSET_COLORS[h.asset] || '#3b82f6',
@@ -213,7 +217,7 @@ export default function Dashboard() {
   })) || [];
 
   if (availableUSDT > 0) {
-    pieData.push({
+    pieDataUnsorted.push({
       asset: 'USDT',
       value: availableUSDT,
       color: ASSET_COLORS.USDT,
@@ -221,6 +225,8 @@ export default function Dashboard() {
     });
   }
 
+  // Sort by percent descending
+  const pieData = pieDataUnsorted.sort((a, b) => b.percent - a.percent);
   const totalValue = pieData.reduce((sum, d) => sum + d.value, 0);
 
   return (
