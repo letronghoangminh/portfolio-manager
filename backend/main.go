@@ -883,13 +883,19 @@ func getPortfolioOverview(c *gin.Context) {
 	// Calculate unrealized PnL from current holdings
 	unrealizedPnL := currentValue.Sub(totalInvested)
 
-	// Total PnL includes both unrealized and realized losses
-	totalPnL := unrealizedPnL.Sub(realizedLoss)
+	// Total Capital for display (includes realized loss that was recorded)
+	displayTotalCapital := totalCapital.Add(realizedLoss)
 
-	// For percentage calculation, use total capital (deposits) as the base
+	// Portfolio Value = crypto holdings + available USDT
+	portfolioValue := currentValue.Add(availableUSDT)
+
+	// Total PnL = Portfolio Value - Total Capital (what user actually invested)
+	totalPnL := portfolioValue.Sub(displayTotalCapital)
+
+	// For percentage calculation, use display total capital as the base
 	totalPnLPercent := decimal.Zero
-	if !totalCapital.IsZero() {
-		totalPnLPercent = totalPnL.Div(totalCapital).Mul(decimal.NewFromInt(100))
+	if !displayTotalCapital.IsZero() {
+		totalPnLPercent = totalPnL.Div(displayTotalCapital).Mul(decimal.NewFromInt(100))
 	}
 
 	if holdings == nil {
@@ -897,7 +903,7 @@ func getPortfolioOverview(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, PortfolioOverview{
-		TotalCapital:    totalCapital.Add(realizedLoss), // Include realized loss in total capital for display
+		TotalCapital:    displayTotalCapital,
 		AvailableUSDT:   availableUSDT,
 		TotalInvested:   totalInvested,
 		CurrentValue:    currentValue,
