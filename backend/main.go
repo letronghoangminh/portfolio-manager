@@ -831,6 +831,7 @@ func getPortfolioOverview(c *gin.Context) {
 	// Fetch current prices
 	prices, _ := fetchAllPrices()
 
+	// First pass: collect all holdings and calculate totals
 	for rows.Next() {
 		var asset string
 		var amountStr, avgPriceStr, totalCostStr string
@@ -859,11 +860,6 @@ func getPortfolioOverview(c *gin.Context) {
 			pnlPercent = pnl.Div(totalCost).Mul(decimal.NewFromInt(100))
 		}
 
-		percentOfCapital := decimal.Zero
-		if !totalCapital.IsZero() {
-			percentOfCapital = totalCost.Div(totalCapital).Mul(decimal.NewFromInt(100))
-		}
-
 		holdings = append(holdings, HoldingDetail{
 			Asset:            asset,
 			Amount:           amount,
@@ -873,11 +869,21 @@ func getPortfolioOverview(c *gin.Context) {
 			CurrentValue:     holdingValue,
 			PnL:              pnl,
 			PnLPercent:       pnlPercent,
-			PercentOfCapital: percentOfCapital,
+			PercentOfCapital: decimal.Zero, // Will be calculated after we know portfolio value
 		})
 
 		totalInvested = totalInvested.Add(totalCost)
 		currentValue = currentValue.Add(holdingValue)
+	}
+
+	// Calculate portfolio value (crypto + USDT)
+	portfolioValue := currentValue.Add(availableUSDT)
+
+	// Second pass: calculate percentage of portfolio for each holding
+	for i := range holdings {
+		if !portfolioValue.IsZero() {
+			holdings[i].PercentOfCapital = holdings[i].CurrentValue.Div(portfolioValue).Mul(decimal.NewFromInt(100))
+		}
 	}
 
 	// Calculate unrealized PnL from current holdings
@@ -886,10 +892,8 @@ func getPortfolioOverview(c *gin.Context) {
 	// Total Capital for display (includes realized loss that was recorded)
 	displayTotalCapital := totalCapital.Add(realizedLoss)
 
-	// Portfolio Value = crypto holdings + available USDT
-	portfolioValue := currentValue.Add(availableUSDT)
-
 	// Total PnL = Portfolio Value - Total Capital (what user actually invested)
+	// portfolioValue was already calculated above
 	totalPnL := portfolioValue.Sub(displayTotalCapital)
 
 	// For percentage calculation, use display total capital as the base

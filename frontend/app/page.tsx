@@ -208,12 +208,15 @@ export default function Dashboard() {
   const totalPnLPercent = portfolio ? parseFloat(portfolio.total_pnl_percent) : 0;
   const positive = isPositive(totalPnL);
 
-  // Calculate pie chart data
+  // Calculate portfolio value first (crypto holdings + available USDT)
+  const portfolioValue = currentValue + availableUSDT;
+
+  // Calculate pie chart data with percentage based on portfolio value
   const pieDataUnsorted = portfolio?.holdings.map(h => ({
     asset: h.asset,
     value: parseFloat(h.current_value),
     color: ASSET_COLORS[h.asset] || '#3b82f6',
-    percent: parseFloat(h.percent_of_capital)
+    percent: parseFloat(h.percent_of_capital) // Already calculated by backend based on portfolio value
   })) || [];
 
   if (availableUSDT > 0) {
@@ -221,7 +224,7 @@ export default function Dashboard() {
       asset: 'USDT',
       value: availableUSDT,
       color: ASSET_COLORS.USDT,
-      percent: totalCapital > 0 ? (availableUSDT / totalCapital) * 100 : 0
+      percent: portfolioValue > 0 ? (availableUSDT / portfolioValue) * 100 : 0
     });
   }
 
